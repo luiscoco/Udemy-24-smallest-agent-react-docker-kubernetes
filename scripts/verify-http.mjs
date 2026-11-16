@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+const base=process.env.VERIFY_BASE_URL||'http://127.0.0.1:9900';
+for(const path of ['/livez','/readyz'])assert.equal((await fetch(base+path)).status,200);
+assert.deepEqual(await(await fetch(base+'/api/health')).json(),{status:'ok',api_key_configured:false},'Verify with a placeholder key, without inference.');
+const post=(body,headers={})=>fetch(base+'/api/agent/query',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
+for(const value of [{},{prompt:''},{prompt:' '},{prompt:42},{prompt:'x'.repeat(4001)}])assert.equal((await post(value)).status,422);
+assert.equal((await post({prompt:'x'.repeat(40000)})).status,413);assert.equal((await post({prompt:'hi'},{Origin:'https://foreign.invalid'})).status,403);assert.equal((await post({prompt:'hi'})).status,503);
+const stream=await fetch(base+'/api/agent/stream',{method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:'{"prompt":"hi"}'});assert.equal(stream.status,200);assert.match(stream.headers.get('content-type'),/text\/event-stream/);const events=await stream.text();assert.match(events,/event: error/);assert.doesNotMatch(events,/event: done/);
+assert.equal((await fetch(base+'/api/docs')).status,200);assert.ok((await(await fetch(base+'/api/openapi.json')).json()).paths['/api/agent/stream']);
+assert.match(await(await fetch(base+'/workflow.svg')).text(),/Node \/ Pod/);for(const path of ['/.env','/api/unknown','/src/server.ts','/assets/%2eenv'])assert.equal((await fetch(base+path)).status,404);
+const html=await(await fetch(base+'/')).text();assert.match(html,/id="root"/);assert.match(html,/Kubernetes/);const asset=html.match(/src="(\/assets\/[^\"]+\.js)"/);assert.ok(asset);assert.equal((await fetch(base+asset[1])).status,200);
+console.log('Compiled React assets, API health/validation/origin, missing-key query/SSE, docs and UML passed without inference.');

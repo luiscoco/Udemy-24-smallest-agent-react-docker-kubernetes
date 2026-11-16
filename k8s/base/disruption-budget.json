@@ -1,0 +1,21 @@
+{
+  "apiVersion": "policy/v1",
+  "kind": "PodDisruptionBudget",
+  "metadata": {
+    "name": "smallest-agent",
+    "namespace": "smallest-agent-24",
+    "labels": {
+      "app.kubernetes.io/name": "smallest-agent",
+      "app.kubernetes.io/instance": "edition-24"
+    }
+  },
+  "spec": {
+    "minAvailable": 1,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": "smallest-agent",
+        "app.kubernetes.io/instance": "edition-24"
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "agent-config",
+    "namespace": "smallest-agent-24",
+    "labels": {
+      "app.kubernetes.io/name": "smallest-agent",
+      "app.kubernetes.io/instance": "edition-24"
+    }
+  },
+  "data": {
+    "API_HOST": "0.0.0.0",
+    "API_PORT": "9900",
+    "TRUST_PROXY": "0",
+    "AGENT_MAX_TURNS": "1",
+    "AGENT_MAX_CONCURRENT_REQUESTS": "2",
+    "CLAUDE_MODEL": "",
+    "AGENT_SYSTEM_PROMPT": "You are a concise teaching assistant.",
+    "NODE_ENV": "production",
+    "TMPDIR": "/tmp"
+  }
+}

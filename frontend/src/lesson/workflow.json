@@ -1,0 +1,162 @@
+[
+  {
+    "number": 1,
+    "title": "Run prompt",
+    "source": "frontend/src/AgentApp.tsx",
+    "line": 58,
+    "language": "typescript",
+    "text": "Trim and lock before asynchronous work.",
+    "explanation": "Shared React state preserves prompt, mode, result and timeline across all five lesson tabs.",
+    "code": "const trimmed = prompt.trim();\nif (busy.current || !trimmed || trimmed.length > 4000) return;\nbusy.current = true;\nsetState('running'); setNotice(''); setResult(null); setPartial(''); setMessages([]); setError(''); setElapsed(0);\nconst started = performance.now();"
+  },
+  {
+    "number": 2,
+    "title": "POST to the same-origin API",
+    "source": "frontend/src/api.ts",
+    "line": 57,
+    "language": "typescript",
+    "text": "Send JSON to the browser-facing origin.",
+    "explanation": "Vite proxies directly to Node locally. Kubernetes port-forward exposes the Service for local use; React contains no API key.",
+    "code": "const response = await authorizedFetch(apiUrl('/api/agent/stream'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), signal });\nif (!response.ok) {\n  const data: unknown = await response.json().catch(() => null);\n  throw new Error(detail(data, `The API could not start the stream (HTTP ${response.status}). Check the server and prompt.`));\n}\nif (!response.body) throw new Error('The API returned an empty stream. Please try again.');"
+  },
+  {
+    "number": 3,
+    "title": "Select ready application Pods",
+    "source": "k8s/base/service.json",
+    "line": 14,
+    "language": "json",
+    "text": "The Service selects this edition’s Pods.",
+    "explanation": "ClusterIP is private to the cluster. Readiness removes terminating or unready Pods from Service endpoints. Port-forward picks one Pod and does not demonstrate load balancing.",
+    "code": "\"selector\": {\n  \"app.kubernetes.io/name\": \"smallest-agent\",\n  \"app.kubernetes.io/instance\": \"edition-24\"\n},\n\"ports\": [\n  {"
+  },
+  {
+    "number": 4,
+    "title": "Deliver to the Node container",
+    "source": "k8s/base/deployment.json",
+    "line": 50,
+    "language": "json",
+    "text": "Run the application image with runtime configuration.",
+    "explanation": "The same image contains compiled React, Node API and the native SDK CLI. Configuration comes from a ConfigMap; only the server receives the model key through secretKeyRef.",
+    "code": "\"containers\": [\n  {\n    \"name\": \"app\",\n    \"image\": \"smallest-agent:24\",\n    \"imagePullPolicy\": \"IfNotPresent\",\n    \"ports\": [\n      {\n        \"name\": \"http\",\n        \"containerPort\": 9900\n      }\n    ],\n    \"envFrom\": [\n      {"
+  },
+  {
+    "number": 5,
+    "title": "Start real SDK runtime",
+    "source": "backend/src/agent-service.ts",
+    "line": 68,
+    "language": "typescript",
+    "text": "Execute the actual TypeScript Agent SDK.",
+    "explanation": "Every run owns temporary work, home and configuration directories. Tools, MCP, plugins, settings, skills and persistence are disabled.",
+    "code": "const conversation = queryFn({\n  prompt,\n  options: agentOptions(config, controller),\n});\ntry {\n  for await (const message of conversation) {"
+  },
+  {
+    "number": 6,
+    "title": "Exchange messages with Claude",
+    "source": "backend/src/agent-service.ts",
+    "line": 73,
+    "language": "typescript",
+    "text": "Consume the SDK async iterator.",
+    "explanation": "The CLI owns the provider HTTPS exchange. This excerpt shows the application boundary rather than invented provider internals.",
+    "code": "for await (const message of conversation) {\n  if (message.type === \"result\") return resultData(message);\n}\nthrow new Error(\"Agent ended without a result\");"
+  },
+  {
+    "number": 7,
+    "title": "Project a safe SDK message",
+    "source": "backend/src/agent-service.ts",
+    "line": 128,
+    "language": "typescript",
+    "text": "Select public lifecycle and text fields.",
+    "explanation": "No raw thinking, paths, session IDs or tool inputs reach the browser. Model key occurrences are redacted. SDK messages are not guaranteed token deltas.",
+    "code": "    yield { type, summary, data };\n  }\n  if (!foundResult) throw new Error(\"Agent ended without a result\");\n} finally {"
+  },
+  {
+    "number": 8,
+    "title": "Flush the Node SSE response",
+    "source": "backend/src/transport.ts",
+    "line": 38,
+    "language": "typescript",
+    "text": "Flush headers and pipe with backpressure.",
+    "explanation": "Browser disconnect aborts the request and its owned SDK work. The transport never waits for a complete answer before sending events.",
+    "code": " res.writeHead(response.status,Object.fromEntries(response.headers));res.flushHeaders();\n if(response.body)await pipeline(Readable.fromWeb(response.body as never),res);else res.end();\n}catch{controller.abort();if(!res.headersSent)json(res,500,'The server could not process this request.');else if(!res.writableEnded)res.end();}"
+  },
+  {
+    "number": 9,
+    "title": "Keep the stream active",
+    "source": "backend/src/handlers.ts",
+    "line": 172,
+    "language": "typescript",
+    "text": "Write idle heartbeat comments every 15 seconds.",
+    "explanation": "The Service forwards TCP traffic without application-level SSE buffering. Any added ingress must explicitly support streaming and a timeout longer than the 180-second agent deadline.",
+    "code": "heartbeat = setInterval(() => {\n  if (!closed)\n    streamController.enqueue(encoder.encode(\": keep-alive\\n\\n\"));\n}, 15000);"
+  },
+  {
+    "number": 10,
+    "title": "Normalize final result",
+    "source": "backend/src/agent-service.ts",
+    "line": 52,
+    "language": "typescript",
+    "text": "Preserve the final answer and reported metrics.",
+    "explanation": "A non-success subtype remains an error even if the raw flag disagrees. Missing cost stays null.",
+    "code": "function resultData(message: SDKResultMessage): AgentResult {\n  return {\n    result:\n      message.subtype === \"success\"\n        ? redact(message.result || \"\")\n        : \"The agent could not complete this prompt. Check the server configuration.\",\n    num_turns: message.num_turns,\n    duration_ms: message.duration_ms,\n    total_cost_usd: message.total_cost_usd ?? null,\n    is_error: message.subtype !== \"success\" || Boolean(message.is_error),\n  };\n}\nasync function runAgent("
+  },
+  {
+    "number": 11,
+    "title": "Validate final result event",
+    "source": "frontend/src/api.ts",
+    "line": 67,
+    "language": "typescript",
+    "text": "Require a typed final result and done.",
+    "explanation": "The parser handles fragmented UTF-8, CRLF and incomplete frames. A display cap never prevents final-result processing.",
+    "code": "  if (event === 'message') { const message = messageFrom(data); if (message.type === 'ResultMessage') finalReceived = true; onMessage(message); }\n});\nif (!completed || !finalReceived) throw new Error('The connection ended before the agent finished. Please try again.');"
+  },
+  {
+    "number": 12,
+    "title": "Render safe colored Markdown",
+    "source": "frontend/src/code.ts",
+    "line": 24,
+    "language": "typescript",
+    "text": "Highlight code and sanitize generated HTML.",
+    "explanation": "Highlight.js colors TypeScript, JSON, Docker and Kubernetes examples; DOMPurify removes active markup before rendering.",
+    "code": "export function renderMarkdown(text: string): string {\n  if (typeof window === 'undefined') return '';\n  return DOMPurify.sanitize(markdown.parse(text, { async: false }));\n}"
+  },
+  {
+    "number": 13,
+    "title": "Complete result plus done",
+    "source": "backend/src/handlers.ts",
+    "line": 180,
+    "language": "typescript",
+    "text": "Complete transport after the final result.",
+    "explanation": "Transport completion never changes a failed SDK result into a success.",
+    "code": "  sendEvent(\"done\", { status: \"complete\" });\n} catch {\n  sendEvent(\"error\", { detail: FAILURE });"
+  },
+  {
+    "number": 14,
+    "title": "Send safe stream failure",
+    "source": "backend/src/handlers.ts",
+    "line": 182,
+    "language": "typescript",
+    "text": "Send an error event without done.",
+    "explanation": "Deadlines and disconnects cancel owned execution. A full Pod returns429 before starting another SDK process. No retry can replay an expensive request automatically.",
+    "code": "  sendEvent(\"error\", { detail: FAILURE });\n} finally {\n  finish();"
+  },
+  {
+    "number": 15,
+    "title": "Show recoverable error",
+    "source": "frontend/src/AgentApp.tsx",
+    "line": 80,
+    "language": "typescript",
+    "text": "Explain the failure and release controls.",
+    "explanation": "Cancel aborts browser fetch. Finally clears the timer and lock. A rollout may interrupt a long-running request; retry is explicit.",
+    "code": "} catch (err) {\n  if (!(err instanceof Error && err.name === 'AbortError')) {\n    const message = err instanceof Error ? err.message : 'The request failed. Check the server connection and API key.';\n    setError(message); setNotice(message); setState('error');\n  }\n} finally {\n  clearInterval(timer.current); setElapsed(Math.round(performance.now() - started)); busy.current = false;"
+  },
+  {
+    "number": 16,
+    "title": "Reject missing model key",
+    "source": "backend/src/handlers.ts",
+    "line": 156,
+    "language": "typescript",
+    "text": "Stop before calling the SDK.",
+    "explanation": "Local Node reads backend/.env; Docker receives runtime environment and Kubernetes uses a Secret. Health checks never use model credits or claim provider authentication.",
+    "code": "if (!config.apiKeyConfigured) {\n  sendEvent(\"error\", { detail: MISSING_KEY });\n  finish();\n  return;"
+  }
+]

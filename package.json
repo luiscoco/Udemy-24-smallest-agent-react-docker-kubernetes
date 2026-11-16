@@ -1,0 +1,29 @@
+{
+  "name": "smallest-agent-react-docker-kubernetes",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/start.mjs",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start": "npm --prefix backend start",
+    "generate:lesson": "node scripts/generate-lesson.mjs",
+    "typecheck": "npm --prefix backend run typecheck && npm --prefix frontend run typecheck",
+    "test": "npm --prefix backend test && npm --prefix frontend test && node --test tests/infra.test.mjs",
+    "build": "npm run generate:lesson && npm --prefix backend run build && npm --prefix frontend run build",
+    "verify:http": "node scripts/verify-http.mjs",
+    "verify:browser": "node scripts/verify-browser.mjs",
+    "verify:infra": "node --test tests/infra.test.mjs",
+    "docker:build": "docker build -t smallest-agent:24 .",
+    "docker:up": "docker compose up --build",
+    "k8s:secret": "node scripts/k8s-secret.mjs",
+    "k8s:validate": "node scripts/validate-k8s.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

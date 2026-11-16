@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor #F8FBFF
+skinparam defaultFontSize 18
+participant "Student / Browser" as Browser
+participant "React client" as React
+participant "Kubernetes Service" as Service
+participant "Node / Pod" as Node
+participant "Agent SDK runtime" as Sdk
+participant "Claude API" as Claude
+Browser -> React : 1. Run prompt
+React -> Service : 2. POST to the same-origin API
+Service -> Service : 3. Select ready application Pods
+Service -> Node : 4. Deliver to the Node container
+Node -> Sdk : 5. Start real SDK runtime
+Sdk -> Claude : 6. Exchange messages with Claude
+loop streamed SDK messages
+Sdk -> Node : 7. Project a safe SDK message
+Node -> Service : 8. Flush the Node SSE response
+Node -> React : 9. Keep the stream active
+end
+alt complete
+Sdk -> Node : 10. Normalize final result
+React -> React : 11. Validate final result event
+React -> Browser : 12. Render safe colored Markdown
+Node -> Service : 13. Complete result plus done
+else failure
+Node -> React : 14. Send safe stream failure
+React -> Browser : 15. Show recoverable error
+else missing key or invalid input
+Node -> React : 16. Reject missing model key
+end
+@enduml

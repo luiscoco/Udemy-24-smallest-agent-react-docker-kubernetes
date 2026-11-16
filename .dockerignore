@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/.env*
+verification
+.git
+.tools
+tests

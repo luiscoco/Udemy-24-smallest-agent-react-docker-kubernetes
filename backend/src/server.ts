@@ -1,0 +1,12 @@
+import {createServer} from 'node:http';
+import {loadEnvironment} from './environment.js';
+import {readConfig} from './config.js';
+import {createAgentService} from './agent-service.js';
+import {createAppHandler} from './transport.js';
+import {gracefulShutdown} from './shutdown.js';
+const env=loadEnvironment(),config=readConfig(env);
+const {handle,abortAll,beginDrain}=createAppHandler(config,createAgentService(config));
+const server=createServer(handle);server.requestTimeout=200000;server.keepAliveTimeout=250000;server.headersTimeout=260000;
+const port=Number(env.API_PORT||9900);if(!Number.isInteger(port)||port<1||port>65535)throw Error('Invalid API_PORT.');
+server.listen(port,env.API_HOST||'127.0.0.1',()=>console.log('React / Kubernetes Agent API ready on port '+port));
+let stopping=false;for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{if(stopping)return;stopping=true;beginDrain();gracefulShutdown(server,abortAll,code=>process.exit(code));});

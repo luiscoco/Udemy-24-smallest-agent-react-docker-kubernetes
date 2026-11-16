@@ -1,0 +1,150 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "The Smallest Agent \u00b7 React + Kubernetes + Node.js",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Process health and model-key presence; no inference or authentication check"
+          },
+          "503": {
+            "description": "Node unavailable or token mismatch"
+          }
+        }
+      }
+    },
+    "/api/agent/query": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Final result"
+          },
+          "400": {
+            "description": "Malformed JSON"
+          },
+          "403": {
+            "description": "Foreign origin"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "415": {
+            "description": "Unsupported media"
+          },
+          "422": {
+            "description": "Invalid prompt"
+          },
+          "502": {
+            "description": "Agent failure"
+          },
+          "503": {
+            "description": "Missing key or service unavailable"
+          },
+          "429": {
+            "description": "Task request capacity reached. Retry after the Retry-After interval."
+          }
+        }
+      }
+    },
+    "/api/agent/stream": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "prompt"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE message, done or error"
+          },
+          "400": {
+            "description": "Malformed JSON"
+          },
+          "403": {
+            "description": "Foreign origin"
+          },
+          "413": {
+            "description": "Body too large"
+          },
+          "415": {
+            "description": "Unsupported media"
+          },
+          "422": {
+            "description": "Invalid prompt"
+          },
+          "502": {
+            "description": "Agent failure"
+          },
+          "503": {
+            "description": "Missing key or service unavailable"
+          },
+          "429": {
+            "description": "Task request capacity reached. Retry after the Retry-After interval."
+          }
+        }
+      }
+    },
+    "/livez": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Liveness without provider calls"
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Ready for requests"
+          },
+          "503": {
+            "description": "Draining during shutdown"
+          }
+        }
+      }
+    }
+  }
+}

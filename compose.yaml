@@ -1,0 +1,16 @@
+services:
+  app:
+    image: smallest-agent:24
+    build: .
+    ports: ["127.0.0.1:9900:9900"]
+    env_file: backend/.env
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 9900
+      TRUST_PROXY: "0"
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:rw,nosuid,size=536870912,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    stop_grace_period: 120s
